@@ -1,4 +1,4 @@
-module github.com/aveyuan/vlog
+module github.com/aveyuan/vlogger
 
 go 1.23.6
 
