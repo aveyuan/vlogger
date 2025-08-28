@@ -17,6 +17,6 @@ type LogConfig struct {
 	Level      string `yaml:"level" json:"level"`             //日志级别
 	MaxSize    int    `yaml:"max_size" json:"max_size"`       //日志最大尺寸
 	MaxAge     int    `yaml:"max_age" json:"max_age"`         //日志最大天数
-	NoStdout   bool   `yaml:"no_stdout" json:"no_stdout"`     //是否不向控制台输出
+	Stdout     bool   `yaml:"stdout" json:"stdout"`           //是否向控制台输出
 	MaxBackups int    `yaml:"max_backups" json:"max_backups"` //最大备份数量
 }

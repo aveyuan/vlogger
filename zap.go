@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 
 	kzap "github.com/go-kratos/kratos/contrib/log/zap/v2"
-	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
 var LogStr2Level = map[string]int8{
@@ -54,12 +54,13 @@ func NewZapLog(LogConfig *LogConfig) *kzap.Logger {
 	atomicLevel.SetLevel(zapcore.Level(l))
 	var writes = []zapcore.WriteSyncer{zapcore.AddSync(&lum)}
 	// 是否向控制台输出
-	if !LogConfig.NoStdout {
+	if LogConfig.Stdout {
 		writes = append(writes, zapcore.AddSync(os.Stdout))
 	}
 	core := zapcore.NewCore(
 		zapcore.NewJSONEncoder(zapcore.EncoderConfig{
 			LevelKey:       "level",
+			MessageKey:     "msg",
 			LineEnding:     zapcore.DefaultLineEnding,
 			EncodeLevel:    zapcore.LowercaseLevelEncoder,
 			EncodeTime:     zapcore.EpochTimeEncoder,
