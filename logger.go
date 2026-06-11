@@ -2,8 +2,7 @@ package vlogger
 
 import (
 	"context"
-
-	"github.com/go-kratos/kratos/v2/log"
+	"log/slog"
 )
 
 type LogWith struct {
@@ -13,24 +12,29 @@ type LogWith struct {
 	ID         string // ID
 }
 
-const ExtLogKey = "extlogkey"
+const (
+	ExtLogKey       = "extlogkey"
+	RequestIDLogKey = "requestidlogkey"
+)
 
 type ExtLogValue struct {
-	Ext interface{}
-	ctx context.Context
+	Ext       interface{}
+	RequestID string
+	ctx       context.Context
 }
 
-func NewLogger(lg log.Logger, with *LogWith) log.Logger {
-	return log.With(lg,
-		"datetime", log.Timestamp("2006-01-02 15:04:05.000"),
-		// "env", with.Env,
-		// "appName", with.AppName,
-		// "version", with.AppVersion,
-		// "id", with.ID,
-		// "traceID", TraceID(),
-		// "spanID", SpanID(),
-		"lineNumber", log.DefaultCaller,
-		"ext", Ext(),
+func NewLogger(lg *slog.Logger, with *LogWith) *slog.Logger {
+	if lg == nil {
+		lg = slog.Default()
+	}
+	if with == nil {
+		return lg
+	}
+	return lg.With(
+		"appName", with.AppName,
+		"version", with.AppVersion,
+		"env", with.Env,
+		"id", with.ID,
 	)
 }
 
@@ -43,11 +47,46 @@ func WithExt(ctx context.Context, ExtLogValue *ExtLogValue) context.Context {
 	return context.WithValue(ctx, ExtLogKey, ExtLogValue)
 }
 
-func Ext() log.Valuer {
-	return func(ctx context.Context) interface{} {
-		if ext, ok := ctx.Value(ExtLogKey).(*ExtLogValue); ok {
-			return ext.Ext
-		}
+func WithRequestID(ctx context.Context, requestID string) context.Context {
+	if ctx == nil {
 		return nil
 	}
+	return context.WithValue(ctx, RequestIDLogKey, requestID)
+}
+
+
+// slog handler实现
+type contextHandler struct {
+	handler slog.Handler
+}
+
+func NewContextHandler(handler slog.Handler) slog.Handler {
+	return &contextHandler{handler: handler}
+}
+
+func (h *contextHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return h.handler.Enabled(ctx, level)
+}
+
+func (h *contextHandler) Handle(ctx context.Context, record slog.Record) error {
+	requestID := ""
+	if ext, ok := ctx.Value(ExtLogKey).(*ExtLogValue); ok {
+		record.AddAttrs(slog.Any("ext", ext.Ext))
+		requestID = ext.RequestID
+	}
+	if value, ok := ctx.Value(RequestIDLogKey).(string); ok && value != "" {
+		requestID = value
+	}
+	if requestID != "" {
+		record.AddAttrs(slog.String("requestId", requestID))
+	}
+	return h.handler.Handle(ctx, record)
+}
+
+func (h *contextHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &contextHandler{handler: h.handler.WithAttrs(attrs)}
+}
+
+func (h *contextHandler) WithGroup(name string) slog.Handler {
+	return &contextHandler{handler: h.handler.WithGroup(name)}
 }
