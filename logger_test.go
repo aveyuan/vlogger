@@ -23,7 +23,6 @@ func TestNewJSONLogger(t *testing.T) {
 	})
 
 	ctx := WithRequestID(context.Background(), "rid")
-	ctx = WithExt(ctx, &ExtLogValue{Ext: map[string]string{"request_id": "rid"}})
 	logger.InfoContext(ctx, "hello")
 
 	data, err := os.ReadFile(filepath.Join(logDir, "app", "app_json.log"))
@@ -95,26 +94,12 @@ func TestLevelFiltering(t *testing.T) {
 	}
 }
 
-func TestContextHandlerExt(t *testing.T) {
-	var buf bytes.Buffer
-	handler := NewContextHandler(slog.NewJSONHandler(&buf, nil))
-	logger := slog.New(handler)
-
-	ctx := WithExt(context.Background(), &ExtLogValue{Ext: "value"})
-	logger.InfoContext(ctx, "hello")
-
-	if !strings.Contains(buf.String(), `"ext":"value"`) {
-		t.Fatalf("missing ext output: %s", buf.String())
-	}
-}
-
 func TestContextHandlerRequestIDFromExt(t *testing.T) {
 	var buf bytes.Buffer
 	handler := NewContextHandler(slog.NewJSONHandler(&buf, nil))
 	logger := slog.New(handler)
 
-	ctx := WithExt(context.Background(), &ExtLogValue{Ext: "value", RequestID: "rid"})
-	logger.InfoContext(ctx, "hello")
+	logger.InfoContext(context.Background(), "hello")
 
 	if !strings.Contains(buf.String(), `"requestId":"rid"`) {
 		t.Fatalf("missing requestId output: %s", buf.String())

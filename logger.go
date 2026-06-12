@@ -13,15 +13,8 @@ type LogWith struct {
 }
 
 const (
-	ExtLogKey       = "extlogkey"
 	RequestIDLogKey = "requestidlogkey"
 )
-
-type ExtLogValue struct {
-	Ext       interface{}
-	RequestID string
-	ctx       context.Context
-}
 
 func NewLogger(lg *slog.Logger, with *LogWith) *slog.Logger {
 	if lg == nil {
@@ -38,22 +31,12 @@ func NewLogger(lg *slog.Logger, with *LogWith) *slog.Logger {
 	)
 }
 
-func WithExt(ctx context.Context, ExtLogValue *ExtLogValue) context.Context {
-	if ctx == nil {
-		return nil
-	}
-	ExtLogValue.ctx = ctx
-
-	return context.WithValue(ctx, ExtLogKey, ExtLogValue)
-}
-
 func WithRequestID(ctx context.Context, requestID string) context.Context {
 	if ctx == nil {
 		return nil
 	}
 	return context.WithValue(ctx, RequestIDLogKey, requestID)
 }
-
 
 // slog handler实现
 type contextHandler struct {
@@ -69,17 +52,11 @@ func (h *contextHandler) Enabled(ctx context.Context, level slog.Level) bool {
 }
 
 func (h *contextHandler) Handle(ctx context.Context, record slog.Record) error {
-	requestID := ""
-	if ext, ok := ctx.Value(ExtLogKey).(*ExtLogValue); ok {
-		record.AddAttrs(slog.Any("ext", ext.Ext))
-		requestID = ext.RequestID
-	}
+
 	if value, ok := ctx.Value(RequestIDLogKey).(string); ok && value != "" {
-		requestID = value
+		record.AddAttrs(slog.String("requestId", value))
 	}
-	if requestID != "" {
-		record.AddAttrs(slog.String("requestId", requestID))
-	}
+
 	return h.handler.Handle(ctx, record)
 }
 
